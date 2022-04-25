@@ -1,0 +1,15 @@
+<div>
+  
+  <form method = "post" action = "/signup" enctype="multipart/form-data">
+    
+    <input required name="username" placeholder = "enter username"/>
+    <input required name = "password" placeholder = "enter password" type="password"/>
+    <input required name = "profile_pic" type = "file"/>
+    <input type = "submit" value = "signup"/>
+
+  </form>
+
+  <% if(error) {%>
+    <h1><%= error %></h1>
+  <% } %>
+</div>

@@ -1,0 +1,10 @@
+<div>
+  
+  <% if( user ) { %>
+    <h3> welcome <%= user.username %> </h3>
+    <img src="<%= user.profile_pic %>"/>
+  <% }else { %>
+    <a href = "/auth"> login </a>
+
+  <% } %>
+</div>

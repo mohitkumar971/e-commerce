@@ -1,0 +1,19 @@
+<%- include("partials/header", {user : user}) %>
+
+<h1> welcome </h1>
+
+
+<% products.forEach(function(product){ %>
+  <div>
+    <h4> <%= product.name %> </h4>
+    <h4> <%= product.price %> </h4>
+    <button>View Description</button>
+    <button class="addToCart" id="<%= product._id %>">Add to Cart</button>
+  </div> 
+
+<% }) %>
+
+<script src= "/scripts/home.js"> </script>
+<button> Load More </button>
+
+
