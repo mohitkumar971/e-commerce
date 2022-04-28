@@ -59,38 +59,6 @@ app.get('/auth', function(req, res)
 	res.render("auth");
 })
 
-//login - using form validation , signup - using agex
-app.get('/login', function(req, res) 
-{
-	res.render("login",{ error : ""} );
-})
-
-app.post("/login", function(req, res )
-{
-	const username = req.body.username;
-	const password = req.body.password;
-
-	userModel.findOne({ username :username, password :password })
-	.then(function(user)
-	{
-		if(!user)
-		{
-			res.render('login', {error : "user not found !"})
-		}
-    
-		// bypassing user verification
-		if( false && !user.isVerifiedMail)
-		{
-			res.render('login', { error : "Please Check your Mail"});
-			return
-		}
-    req.session.isLoggedIn = true;
-		req.session.user = user;
-
-		res.redirect("/");
-
-	})
-})
 
 app.route("/signup").get(function(req,res)
 {
@@ -104,17 +72,17 @@ app.route("/signup").get(function(req,res)
     //someone tries to singup by changing required property from console(Frontend)
 		if(!username)
 		{
-			res.render("signup",{ error : "Please enter username"})
+			res.render("error.ejs",{ error : "Please enter username"})
 			return
 		}
 		if(!password)
 		{
-			res.render("signup",{ error : "Please enter password"})
+			res.render("error",{ error : "Please enter password"})
 			return
 		}
 		if(!file)
 		{
-			res.render("signup",{ error : "Please attach your profile pic"})
+			res.render("error",{ error : "Please attach your profile pic"})
 			return
 		}
 
@@ -130,8 +98,7 @@ app.route("/signup").get(function(req,res)
 				// token encryption //
 				//href = "link you can privide to get after verificaiton"
 				var html = '<h1> click here to verify </h1>' +  
-				'<a href="link to be updated'+username+'"> click here </a>'
-
+				'<a href="http://localhost:3000/verifyUser/'+username+'"> click here </a>'
 				sendMail(
 					username, 
 					"welcome to ecommerce app",
@@ -141,22 +108,23 @@ app.route("/signup").get(function(req,res)
 					{
 						if(error)
 						{
-						  res.render("signup", {error : "unable to send email"})	
+						  res.render("error.ejs", {error : "unable to send email"})	
 						}
 						else
 						{
-							res.redirect("/login");
+							res.render("message.ejs",{ msg: "Please check your mail for verification" });
 						}
 					}
 				)
-
-				res.redirect("/login");
+				//res.redirect("/login");
 			})
 			.catch(function(err){
 				//console.log(err)
-				res.render("singup", {error: "something went wrong"});
+				res.render("error.ejs", {error: "something went wrong"});
 			})
 	})
+
+
 
 app.get("/", function(req, res)
 {
@@ -183,6 +151,40 @@ app.get("/", function(req, res)
 
 
 
+//login 
+
+app.route('/login').get(function(req, res) 
+{
+	res.render("login",{ error : ""} );
+})
+.post(function(req, res )
+{
+	var username = req.body.username;
+	var password = req.body.password;
+
+	userModel.findOne({ username :username, password :password })
+	.then(function(user)
+	{
+		if(!user)
+		{
+			res.render('error.ejs', {error : "user not found !"})
+		}
+    
+		// bypassing user verification
+		if( false && !user.isVerifiedMail)
+		{
+			res.render('login', { error : "Please Check your Mail"});
+			return
+		}
+    req.session.isLoggedIn = true;
+		req.session.user = user;
+
+		res.redirect("/");
+
+	})
+})
+
+
 app.get("/verifyUser/:username", function(req,res)
 {
   const username = req.params.username;
@@ -205,12 +207,103 @@ app.get("/verifyUser/:username", function(req,res)
 })
 
 
+app.route("/forget").get(function(req,res)
+{
+	res.render("forgetpassword.ejs")
+}).post(function(req,res)
+{
+	var username = req.body.username;
+	req.session.username = username;
+	userModel.findOne({username:username}).then(function(data)
+	{
+		var user_id=(data.id);
+		// console.log(user_id);
+		var isVerifiedMail=data.isVerifiedMail;
+		if(isVerifiedMail)
+		{
+			
+			// console.log("user is verified")
+			var url='<a href= "http://localhost:3000/resetpass/'+user_id+'"> Reset Password</a>'
+			sendMail(
+				username,
+				"Forgot PassWord?",
+				"click here to reset it",
+				url,
+				function(err)
+				{
+					if(err)
+					{
+						res.render("error.ejs",{
+							error:"Error - Your password cannot be reset"
+						})
+					}
+					else{
+						console.log("Password Change success");
+						res.status(200);
+						res.render("message.ejs",{msg:"check your mail to change password"});
 
-app.get('/getproduct',function(req,res){
-	proNum = proNum + 5;
-	// console.log(count);
-	res.end();							
+					}
+				}
+			)
+		}
+		else
+		{
+			res.render("error.ejs",{ error:"invalid email" })
+		}
+
+	})
+	.catch(function()
+	{
+			res.render("error.ejs",{ error:"invalid email"	})
+	})
 })
+
+
+app.get("/resetpass/:user_id",function(req,res)
+{
+	res.render("resetpass.ejs");
+})
+
+
+app.post("/setnewpass",function(req,res)
+{
+	var username=req.session.username;
+	var newpassword=req.body.password;
+	userModel.updateOne({username:username},{password:newpassword})
+	.then(function(data){
+		console.log(data);
+		res.render("login.ejs",{error:''})
+			sendMail(username,
+			"Password Changed",
+			"Password Changed Successfully",
+			"",
+			function(err)
+			{
+				if(err)
+				{
+					res.render("error.ejs",{error : "Error while Changing Password!"})
+				}
+				else
+				{
+					console.log("Password Changed Successfully");
+					res.status(200);
+					res.render("message.ejs",{msg:"Password Changed"});
+
+				}
+			})
+	}).catch(function()
+	{
+			res.render("error.ejs",{ error:"error ,password not set" })
+	})
+})
+
+
+// app.get('/getproduct',function(req,res){
+// 	proNum = proNum + 5;
+// 	// console.log(count);
+// 	res.end();							
+
+// })
 
 app.route('/logout').get((req,res)=>{
 	req.session.destroy();
@@ -252,3 +345,22 @@ app.listen(port, function()
 	console.log(`Example app listening at http://localhost:${port}`)
 })
 
+
+
+// admin side 
+
+
+// const adminRoutes = require("./routes/admin");
+
+// app.use("/admin", function(req, res, next)
+// {
+// 	// check is login or not 
+// 	// if session then if admin
+// 	// if not then redirect login 
+	
+// 	next()
+
+// })
+
+// app.use("/admin/auth", adminRoutes.auth );
+// app.use("/admin/product", adminRoutes.product );
